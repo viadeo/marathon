@@ -1,0 +1,17 @@
+# Marathon environment settings for start up
+# Uncomment to customize your settings
+
+# Marathon storage
+#ZK_HOSTS=localhost:2181
+#ZK_STATE=/marathon
+
+# Marathon UI and declaration
+#HOSTNAME=localhost
+#PORT=8080
+
+# Mesos requirement
+#MASTER=zk://localhost:2181/mesos
+#ROLE=*
+
+# Use $OPTS to add other settings not handled by init script
+#OPTS="--log_config /etc/marathon/logging.properties"

@@ -1,0 +1,9 @@
+Package: [[name]]
+Version: [[version]]
+Section: misc
+Priority: optional
+Architecture: all
+Depends: java-runtime-headless
+Maintainer: Damien Hardy <dhardy@viadeoteam.com>
+Description: Marathon service provider for Mesos
+Distribution: [[debian.distribution]]
