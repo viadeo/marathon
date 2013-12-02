@@ -1,0 +1,83 @@
+#!/bin/sh
+# Start/stop the Marathon.
+#
+### BEGIN INIT INFO
+# Provides:          marathon
+# Required-Start:    $remote_fs $syslog $time
+# Required-Stop:     $remote_fs $syslog $time
+# Should-Start:      $network $named slapd autofs ypbind nscd nslcd
+# Should-Stop:       $network $named slapd autofs ypbind nscd nslcd
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Marathon is a Mesos framework for long-running services
+# Description:       Marathon provides a REST API for starting, stopping, 
+#                    and scaling services. There is also a Ruby command line client.
+#                    Marathon is written in Scala and can run in highly-available 
+#                    mode by running multiple Marathon instances. 
+#                    The state of running tasks gets stored in the Mesos state abstraction. 
+### END INIT INFO
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+DESC="marathon daemon"
+NAME=marathon
+DAEMON=/usr/bin/${NAME}
+PIDFILE=/var/run/${NAME}.pid
+SCRIPTNAME=$0
+
+if [ "$(id -u)" -ne "0" ]; then
+  echo "you must be root to start ${DESC}"
+  exit 1
+fi
+
+. /lib/lsb/init-functions
+
+set_environment() {
+  [ ! -f /etc/default/marathon ] || . /etc/default/marathon
+  [ -z "${ULIMIT:-}" ] || ulimit $ULIMIT
+  EXTRA_OPTS=" ${ZK_HOSTS:+--zk_hosts $ZK_HOSTS} \
+    ${ZK_STATE:+--zk_state $ZK_STATE} \
+    ${HOSTNAME:+--hostname $HOSTNAME} \
+    ${PORT:+--http_port $PORT} \
+    ${MASTER:+--master $MASTER} \
+    ${ROLE:+--mesos_role $ROLE} \
+    ${OPTS:+$OPTS}"
+}
+
+case "$1" in
+  start)
+    set_environment
+    log_daemon_msg "Starting ${DESC}" "${NAME}"
+
+    # best way to daemonize, imho
+    start-stop-daemon --start --quiet --background \
+        --pidfile $PIDFILE --make-pidfile \
+        --exec $DAEMON -- $EXTRA_OPTS
+    log_end_msg $?
+  ;;
+  stop)
+    log_daemon_msg "Stopping ${DESC}" "${NAME}"
+    killproc -p $PIDFILE $DAEMON
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && [ -e "$PIDFILE" ] && rm -f $PIDFILE
+    log_end_msg $RETVAL
+  ;;
+  restart)
+    log_daemon_msg "Restarting ${DESC}" "${NAME}" 
+    $0 stop
+    sleep 5
+    $0 start
+  ;;
+  reload|force-reload)
+    log_daemon_msg "Reloading configuration files for ${DESC}" "${NAME}"
+    # cron reloads automatically
+    log_end_msg 0
+  ;;
+  status)
+    status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
+    ;;
+  *)
+    log_action_msg "Usage: ${SCRIPTNAME} {start|stop|status|restart|reload|force-reload}"
+    exit 2
+  ;;
+esac
+exit 0
