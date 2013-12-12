@@ -8,8 +8,8 @@ bin=$(dirname $me)
 process=$(basename $me)
 
 ##- JAVA OPTIONS ==============================================================
-HEAP=1024M
-PERMGEN=256M
+HEAP=${HEAP:-1024M}
+PERMGEN=${PERMGEN:-256M}
 
 #- Heap space -----------------------------------------------------------------
 echo "==> HEAP memory used: $HEAP"
