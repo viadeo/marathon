@@ -13,6 +13,7 @@ import scala.concurrent.duration.Duration
 import java.util.concurrent.atomic.AtomicBoolean
 import com.twitter.common.base.ExceptionalCommand
 import com.twitter.common.zookeeper.Group.JoinException
+import scala.collection.mutable
 import scala.Option
 import com.twitter.common.zookeeper.Candidate
 import com.twitter.common.zookeeper.Candidate.Leader
@@ -71,17 +72,11 @@ class MarathonSchedulerService @Inject()(
   }
 
   def startApp(app: AppDefinition): Future[_] = {
-    // Backwards compatibility
-    val oldPorts = app.ports
-    val newPorts = if (oldPorts == Nil) {
-      Seq(newAppPort(app))
-    } else {
-      oldPorts.map(port => if (port == 0) newAppPort(app) else port)
-    }
+    val newPorts = newAppPorts(app.ports)
 
-    if (oldPorts != newPorts) {
-      val asMsg = Seq(oldPorts, newPorts).map("[" + _.mkString(", ") + "]")
-      log.info(s"Assigned some ports for ${app.id}: ${asMsg.mkString(" -> ")}")
+    if (newPorts != app.ports) {
+      val asMsg = Seq(app.ports, newPorts).map("[" + _.mkString(", ") + "]")
+      log.info(s"Ports were chosen for ${app.id}: ${asMsg.mkString(" -> ")}")
       app.ports = newPorts
     }
 
@@ -168,6 +163,29 @@ class MarathonSchedulerService @Inject()(
   }
   //End Leader interface
 
+  /**
+   * Replace 0 ports in the input with random, available ports. If the input
+   * is an empty sequence, treat it as though it were a list with one zero in
+   * it.
+   * @param ports
+   * @return
+   */
+  private def newAppPorts(ports: Seq[Int]): Seq[Int] = {
+    // TODO this is pretty expensive, find a better way
+    val assignedPorts = mutable.Set(listApps().map(_.ports).flatten:_*)
+    val range = config.localPortMax() - config.localPortMin()
+
+    for (p <- if (ports.isEmpty) Seq(0) else ports) yield {
+      if (p > 0) p else {
+        val filtered = Stream
+          .continually(config.localPortMin() + Random.nextInt(range))
+          .dropWhile(assignedPorts.contains(_))
+        assignedPorts += filtered.head
+        filtered.head
+      }
+    }
+  }
+
   private def scheduleTaskBalancing() {
     val timer = new Timer()
     val task = new TimerTask {
@@ -184,15 +202,5 @@ class MarathonSchedulerService @Inject()(
       log.info("Offering leadership.")
       candidate.get.offerLeadership(this)
     }
-  }
-
-  private def newAppPort(app: AppDefinition): Int = {
-    // TODO this is pretty expensive, find a better way
-    val assignedPorts = listApps().map(_.ports).flatten
-    var port = 0
-    do {
-      port = config.localPortMin() + Random.nextInt(config.localPortMax() - config.localPortMin())
-    } while (assignedPorts.contains(port))
-    port
   }
 }
