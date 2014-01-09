@@ -10,6 +10,9 @@ define([
     destroy: function() {
       this.refs.modalComponent.destroy();
     },
+    getResource: function() {
+      return this.props.model;
+    },
     mixins: [BackboneMixin],
     onChange: function(event) {
       this.props.model.set(event.target.name, event.target.value);
@@ -27,6 +30,13 @@ define([
 
       // URIs should be an Array of Strings.
       if ("uris" in modelAttrs) modelAttrs.uris = modelAttrs.uris.split(",");
+
+      // mem, cpus, and instances are all Numbers and should be parsed as such.
+      if ("mem" in modelAttrs) modelAttrs.mem = parseFloat(modelAttrs.mem);
+      if ("cpus" in modelAttrs) modelAttrs.cpus = parseFloat(modelAttrs.cpus);
+      if ("instances" in modelAttrs) {
+        modelAttrs.instances = parseInt(modelAttrs.instances, 10);
+      }
 
       this.props.onCreate(modelAttrs);
       this.destroy();
