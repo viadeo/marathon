@@ -48,6 +48,8 @@ define([
         <ModalComponent ref="modalComponent">
           <form method="post" className="form-horizontal" role="form" onSubmit={this.onSubmit}>
             <div className="modal-header">
+              <button type="button" className="close"
+                aria-hidden="true" onClick={this.destroy}>&times;</button>
               <h3 className="modal-title">New Application</h3>
             </div>
             <div className="modal-body">
@@ -65,7 +67,9 @@ define([
                   Command
                 </label>
                 <div className="col-md-9">
-                  <input className="form-control" id="cmd-field" name="cmd" required />
+                  <textarea style={{resize: "vertical"}} className="form-control"
+                    id="cmd-field" name="cmd" required>
+                  </textarea>
                 </div>
               </div>
               <div className="form-group">
